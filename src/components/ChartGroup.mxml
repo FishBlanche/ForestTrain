@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx1:Canvas xmlns:fx="http://ns.adobe.com/mxml/2009"  horizontalScrollPolicy="off"  verticalScrollPolicy="off" 
+			xmlns:s="library://ns.adobe.com/flex/spark" xmlns:mx1="library://ns.adobe.com/flex/mx" xmlns:chart="charts.*" show="dataShow()"  hideEffect="{wipeDown}"  showEffect="{wipeUp}"  >
+	<fx:Declarations>
+		<mx1:WipeDown id="wipeDown" duration="600"/>
+		<mx1:WipeUp id="wipeUp" duration="600"/>
+	 <s:VScrollBar id="vsc"/>
+	</fx:Declarations>
+		<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		
+		 
+		.myBackBtnStyle
+		{
+			skin:Embed(source="assets/backIcon.png");
+			overSkin:Embed(source="assets/backIcon.png");
+			selectedDownSkin:Embed(source="assets/backIcon.png");
+			selectedUpSkin:Embed(source="assets/backIcon.png");
+			selectedOverSkin:Embed(source="assets/backIcon.png");
+			fontFamily:"Verdana";
+			fontSize:25;
+			textAlign:"center";
+			color:"0xffffff";
+			textRollOverColor:"0xffffff";
+			textSelectedColor:"0xffffff";
+		}
+	</fx:Style>
+	 
+		
+	 
+	<s:Image   source="@Embed('assets/sandtableBlur.png')" width="{this.width}" height="{this.height}" smooth="true" cacheAsBitmap="true" scaleMode="stretch"/>
+	<!--mx1:Button click="back()" verticalGap="-1" x="{this.width-68}" y="10" styleName="myBackBtnStyle"/-->
+	<mx1:Button click="back()" verticalGap="-1" x="{this.width-68}" y="10"   skin="@Embed('assets/backIconbg.png')" icon="@Embed('assets/backIcon.png')" labelPlacement="bottom" label="返回"  width="75" height="75"    fontSize="16" color="#ffffff" textRollOverColor="#ffffff" textSelectedColor="#ffffff"/>
+	<mx1:Button id="Day30"  click="show30Day()"  verticalGap="-1" x="{this.width-68*2}" y="10" alpha="0.5"  skin="@Embed('assets/backIconbg.png')" icon="@Embed('assets/clock30.png')" labelPlacement="bottom" label="30天"  width="75" height="75"    fontSize="16" color="#ffffff" textRollOverColor="#ffffff" textSelectedColor="#ffffff"/>
+	<mx1:Button id="Day15" click="show15Day()"   verticalGap="-1" x="{this.width-68*3}" y="10" alpha="0.5"  skin="@Embed('assets/backIconbg.png')" icon="@Embed('assets/clock15.png')" labelPlacement="bottom" label="15天"  width="75" height="75"    fontSize="16" color="#ffffff" textRollOverColor="#ffffff" textSelectedColor="#ffffff"/>
+	<mx1:Button id="Day5" click="show5Day()"  verticalGap="-1" x="{this.width-68*4}" y="10"    skin="@Embed('assets/backIconbg.png')" icon="@Embed('assets/clock5.png')" labelPlacement="bottom" label="5天"  width="75" height="75"    fontSize="16" color="#ffffff" textRollOverColor="#ffffff" textSelectedColor="#ffffff"/>
+	<s:BusyIndicator  x="{this.width-68*5}" y="15" id="busy" visible="true" width="48" height="48"    symbolColor="#FFFFFF" />
+<fx:Script>
+	<![CDATA[
+		import mx.collections.ArrayCollection;
+		import mx.core.FlexGlobals;
+		import mx.messaging.ChannelSet;
+		import mx.messaging.channels.AMFChannel;
+		import mx.rpc.events.ResultEvent;
+		import mx.rpc.remoting.RemoteObject;
+		
+		import spark.managers.PersistenceManager;
+ 
+		private var myAMF:AMFChannel=new AMFChannel();
+		private var channelSet:ChannelSet=new ChannelSet();
+		private var ro:RemoteObject = new RemoteObject();
+		
+		private var _selectedId:int;
+        private var _selectedDays:int=5;
+
+		public function get selectedDays():int
+		{
+			return _selectedDays;
+		}
+
+		public function set selectedDays(value:int):void
+		{
+			_selectedDays = value;
+		}
+
+		public function get selectedId():int
+		{
+			return _selectedId;
+		}
+
+		public function set selectedId(value:int):void
+		{
+			_selectedId = value;
+		}
+
+		private function back():void
+		{
+			dispatchEvent(new Event("backFromHistory",true));
+		}
+		private function dataShow():void {
+		 
+		 //   trace("show selectedId"+selectedId);
+			busy.visible=true;
+			var serveraddress:PersistenceManager = new PersistenceManager();
+			if(serveraddress.load())
+			{
+				if(serveraddress.getProperty("serverAddr"))
+				{
+					myAMF.url = serveraddress.getProperty("serverAddr") as String;
+					// trace("myAMF.url"+myAMF.url);
+					channelSet.addChannel(myAMF); 
+					ro.channelSet = channelSet;
+					ro.destination = "SensingHistoryService";
+					ro.addEventListener(ResultEvent.RESULT,ds_resulted,false,0,true);
+					ro.getFixedNumberMoteHistoryByMoteIDdesc({MoteID:selectedId,days:selectedDays});	
+				}
+				else
+				{
+					trace("myAMF.url未知");
+				}
+			}
+			else
+			{
+				trace("myAMF.url未知");
+			}
+		}
+		private function ds_resulted(event:ResultEvent):void{
+			busy.visible=false;
+			var tmp:ArrayCollection  =(event.result as ArrayCollection);
+			var takenum:int=Math.floor(tmp.length/1500);
+			var removenum:int=0;
+			if(takenum>1){
+				for(var i:int=0;i<tmp.length;)
+				{
+					for(var j:int=1;j<takenum&&(i+1)<tmp.length;j++)
+					{
+						tmp.removeItemAt(i+1);
+						removenum++;
+					}
+					i=i+1;
+				}
+				tmp.refresh();
+			}
+			trace("tmp"+tmp.length);
+			temchart.data=tmp.toArray();
+			humchart.data=tmp.toArray();
+			lightchart.data=tmp.toArray();
+		}
+		private function show30Day():void
+		{
+			selectedDays=30;
+			Day30.alpha=1;
+			Day15.alpha=0.5;
+			Day5.alpha=0.5;
+			dataShow();
+		}
+		private function show15Day():void
+		{
+			selectedDays=15;
+			Day30.alpha=0.5;
+			Day15.alpha=1;
+			Day5.alpha=0.5;
+			dataShow();
+		}
+		private function show5Day():void
+		{
+			selectedDays=5;
+			Day30.alpha=0.5;
+			Day15.alpha=0.5;
+			Day5.alpha=1;
+			dataShow();
+		}
+	]]>
+</fx:Script>
+	 
+	<s:Scroller top="75" verticalScrollBar="{vsc}"     horizontalScrollPolicy="off"     color="haloblue"    id="scrllr"       width="{this.width}" height="{this.height}"  >
+	 
+		<s:VGroup     gap="{this.height*0.05}"    width="{this.width}"  id="PC"  >
+			<chart:PortfolioChart id="temchart" itemSelected="1"     width="{this.width}" height="{this.height*0.25}"/>
+			<chart:PortfolioChart id="humchart" itemSelected="2"     width="{this.width}" height="{this.height*0.25}"/>
+			<chart:PortfolioChart id="lightchart" itemSelected="3"    width="{this.width}" height="{this.height*0.25}"/>
+			<!--s:Group height="40"/-->
+		</s:VGroup>
+		 
+	</s:Scroller>
+</mx1:Canvas>

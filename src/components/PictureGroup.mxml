@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx1:Canvas xmlns:fx="http://ns.adobe.com/mxml/2009"  horizontalScrollPolicy="off"  verticalScrollPolicy="off" creationComplete="create()"
+			xmlns:s="library://ns.adobe.com/flex/spark" xmlns:mx1="library://ns.adobe.com/flex/mx" xmlns:chart="charts.*"   show="dataShow()"  hideEffect="{wipeDown}"  showEffect="{wipeUp}"  >
+	<fx:Declarations>
+		<mx1:WipeDown id="wipeDown" duration="600"/>
+		<mx1:WipeUp id="wipeUp" duration="600"/>
+		<s:VScrollBar id="vsc"/>
+	</fx:Declarations>
+		<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		
+			.hscroll
+			{
+				thumbSkin:Embed(source="assets/thumb.png");
+				trackSkin: Embed(source="assets/track.png");
+				downArrowSkin:Embed(source="assets/down.png");
+				upArrowSkin:Embed(source="assets/up.png");
+			}
+		.myBackBtnStyle
+		{
+			skin:Embed(source="assets/backIcon.png");
+			overSkin:Embed(source="assets/backIcon.png");
+			selectedDownSkin:Embed(source="assets/backIcon.png");
+			selectedUpSkin:Embed(source="assets/backIcon.png");
+			selectedOverSkin:Embed(source="assets/backIcon.png");
+			fontFamily:"Verdana";
+			fontSize:25;
+			textAlign:"center";
+			color:"0xffffff";
+			textRollOverColor:"0xffffff";
+			textSelectedColor:"0xffffff";
+		}
+			.myPicPreviewBtnStyle
+			{
+				skin:Embed(source="assets/picPreview.png");
+				overSkin:Embed(source="assets/picPreviewSelected.png");
+				selectedDownSkin:Embed(source="assets/picPreviewSelected.png");
+				selectedUpSkin:Embed(source="assets/picPreviewSelected.png");
+				selectedOverSkin:Embed(source="assets/picPreviewSelected.png");
+				fontFamily:"Verdana";
+				fontSize:25;
+				textAlign:"center";
+				color:"0xffffff";
+				textRollOverColor:"0xffffff";
+				textSelectedColor:"0xffffff";
+			}
+			.myPicNextViewBtnStyle
+			{
+				skin:Embed(source="assets/picNextView.png");
+				overSkin:Embed(source="assets/picNextViewSelected.png");
+				selectedDownSkin:Embed(source="assets/picNextViewSelected.png");
+				selectedUpSkin:Embed(source="assets/picNextViewSelected.png");
+				selectedOverSkin:Embed(source="assets/picNextViewSelected.png");
+				fontFamily:"Verdana";
+				fontSize:25;
+				textAlign:"center";
+				color:"0xffffff";
+				textRollOverColor:"0xffffff";
+				textSelectedColor:"0xffffff";
+			}
+			.myTextInput
+			{
+				borderSkin: Embed(source='assets/textBox.png',scaleGridLeft='4', scaleGridTop='10', scaleGridRight='45', scaleGridBottom='15'
+					);
+				color: #000000;
+				font-size:18;
+				padding-left:5;
+				showPromptWhenFocused: false;
+			}
+			.mySearchBtnStyle
+			{
+				skin:Embed(source="assets/searchNormal.png");
+				overSkin:Embed(source="assets/searchSelected.png");
+				selectedDownSkin:Embed(source="assets/searchSelected.png");
+				selectedUpSkin:Embed(source="assets/searchSelected.png");
+				selectedOverSkin:Embed(source="assets/searchSelected.png");
+				fontFamily:"Verdana";
+				fontSize:25;
+				textAlign:"center";
+				color:"0xffffff";
+				textRollOverColor:"0xffffff";
+				textSelectedColor:"0xffffff";
+			}
+			
+	</fx:Style>
+	
+	
+	
+	<s:Image   source="@Embed('assets/sandtableBlur.png')" width="{this.width}" height="{this.height}" smooth="true" cacheAsBitmap="true" scaleMode="stretch"/>
+	<!--mx1:Button click="back()" verticalGap="-1" x="{this.width-68}" y="10" styleName="myBackBtnStyle"/-->
+	<mx1:Button click="back()" verticalGap="-1" x="{this.width-90}" y="20"   skin="@Embed('assets/backIconbg.png')" icon="@Embed('assets/backIcon.png')" labelPlacement="bottom" label="返回"  width="75" height="75"    fontSize="16" color="#ffffff" textRollOverColor="#ffffff" textSelectedColor="#ffffff"/>
+	<s:HGroup  y="40" horizontalCenter="0" width="513" height="42" horizontalAlign="center" verticalAlign="middle" id="hg">
+		<s:TextInput prompt="年"  width="70"       height="42"  id="startYear" color="#52b807"  styleName="myTextInput" restrict="0-9"  />
+		<s:TextInput prompt="月"  width="50"    height="42"  id="startMonth" color="#52b807" styleName="myTextInput" restrict="0-9" />
+		<s:TextInput prompt="日" width="50"    height="42"  id="startDay" color="#52b807" styleName="myTextInput" restrict="0-9" />
+		<s:Image source="assets/to.png" />
+		<s:TextInput prompt="年" width="70"      height="42"  id="endYear" color="#52b807"  styleName="myTextInput" restrict="0-9"  />
+		<s:TextInput prompt="月" width="50"    height="42"  id="endMonth" color="#52b807" styleName="myTextInput" restrict="0-9" />
+		<s:TextInput prompt="日" width="50"    height="42"  id="endDay" color="#52b807" styleName="myTextInput" restrict="0-9" />
+		<s:Spacer width="4"/>
+		<mx1:Button  right="5"    styleName="mySearchBtnStyle" id="searchbtn"    cacheAsBitmap="true" click="searchbtn_Click()"  />
+		<s:BusyIndicator right="5" id="busySearch"  includeInLayout="false"  visible="false" width="50" height="50"    symbolColor="#FFFFFF" />
+	 
+	</s:HGroup>
+ 	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.core.FlexGlobals;
+			import mx.messaging.ChannelSet;
+			import mx.messaging.channels.AMFChannel;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.remoting.RemoteObject;
+			
+			import spark.managers.PersistenceManager;
+			
+			import Controller.CameraPicturesFeed;
+			
+			 
+			private var _pics:Array;
+			private var _currentSelectedCameraIp:String;
+			private var imgUrl:String="http://";
+			private var curIndex:int=0;
+			private var  cameraPicFeed:CameraPicturesFeed;
+			var persistencemanager:PersistenceManager=new PersistenceManager();
+
+			public function get currentSelectedCameraIp():String
+			{
+				return _currentSelectedCameraIp;
+			}
+
+			public function set currentSelectedCameraIp(value:String):void
+			{
+				_currentSelectedCameraIp = value;
+			}
+
+			public function get pics():Array
+			{
+				return _pics;
+			}
+
+			public function set pics(value:Array):void
+			{
+				warningtext.includeInLayout=false;
+				warningtext.visible=false;
+				warningtext.text="";
+				busy.visible=false;
+				mainImg.source=null;
+				
+				_pics = value;
+				picCanvas.removeAllElements();
+				addPic();
+			}
+			private function addPic():void
+			{
+				var picsLen:int=pics.length;
+				if(picsLen==0)
+				{
+					warningtext.includeInLayout=true;
+					warningtext.visible=true;
+					warningtext.text="未找到符合搜索条件的照片!";
+					return;
+				}
+				
+				mainImg.source=imgUrl+pics[0];
+				curIndex=0;
+				mainpicView.includeInLayout=true;
+				mainpicView.visible=true;
+				
+				for(var i:int=0;i<picsLen;i++)
+				{
+					var img:Image=new Image;
+					img.source=imgUrl+pics[i];
+					img.width=180;
+					img.height=90;
+					img.verticalCenter=0;
+					img.x=i*180;
+					img.id=String(i);
+					img.addEventListener(MouseEvent.MOUSE_DOWN,mouseClicked,false,0,true);
+					picCanvas.addElement(img);
+				}
+			 
+				trace("pics.length"+pics.length);
+			}
+			private function mouseClicked(e:MouseEvent):void
+			{
+				mainImg.source=(e.currentTarget as Image).source;
+				curIndex=Number((e.currentTarget as Image).id);
+			}
+			private function back():void
+			{
+				dispatchEvent(new Event("backFromPicView",true));
+			}
+			private function create():void
+			{
+				if(persistencemanager.load())
+				{ 
+					if(persistencemanager.getProperty("serverIpAddr"))
+					{
+						imgUrl=imgUrl+String(persistencemanager.getProperty("serverIpAddr"))+":";
+					}
+					if(persistencemanager.getProperty("serverPortAddr"))
+					{
+						imgUrl=imgUrl+String(persistencemanager.getProperty("serverPortAddr"))+"/";
+					}
+					imgUrl+="cameraPic/";
+				}
+				//	
+			}
+			private function dataShow():void {
+				if(!cameraPicFeed)
+				{
+					cameraPicFeed=new CameraPicturesFeed();
+					cameraPicFeed.addEventListener("_CameraPicturesArrived",fillPictureOverview,false,0,true);
+				}
+			//	trace("currentSelectedCameraIp"+currentSelectedCameraIp);
+				cameraPicFeed.getCameraPicByIp(currentSelectedCameraIp);
+				startYear.text="";
+				startMonth.text="";
+				startDay.text="";
+				endYear.text="";
+				endMonth.text="";
+				endDay.text="";
+				 
+			}
+			private function fillPictureOverview(e:Event):void
+			{
+		//		trace("fillPictureOverview");
+				pics=cameraPicFeed.cameraPicList;
+				
+				
+				searchbtn.includeInLayout=true;
+				searchbtn.visible=true;
+				busySearch.includeInLayout=false;
+				busySearch.visible=false;
+			}
+			private function prebtn_Click():void
+			{
+				if(curIndex>0)
+				{
+					 if(pics.length>0&&curIndex==pics.length)
+					 {
+						 curIndex=pics.length-1;
+					 }
+					curIndex--;
+				//	trace("prebtn_Click"+curIndex);
+					if(pics.length>0&&curIndex>=0)
+					{
+						mainImg.source=imgUrl+pics[curIndex];
+					}
+					
+				}
+			}
+			private function nextbtn_Click():void
+			{
+				if(curIndex<pics.length)
+				{
+					curIndex++;
+				//	 trace("nextbtn_Click"+curIndex);
+					if(pics.length>0&&curIndex<pics.length)
+					{
+						mainImg.source=imgUrl+pics[curIndex];
+					}
+					 
+				}
+				
+				
+			}
+			private function searchbtn_Click():void
+			{
+				 
+				searchbtn.includeInLayout=false;
+				searchbtn.visible=false;
+				busySearch.includeInLayout=true;
+				busySearch.visible=true;
+				
+				var startDate:String=startYear.text+"-"+startMonth.text+"-"+startDay.text+" "+"00:00:00";
+				var endDate:String=endYear.text+"-"+endMonth.text+"-"+endDay.text+" "+"00:00:00";
+				if(!cameraPicFeed)
+				{
+					cameraPicFeed=new CameraPicturesFeed();
+					cameraPicFeed.addEventListener("_CameraPicturesArrived",fillPictureOverview,false,0,true);
+				}
+				//trace("currentSelectedCameraIp"+currentSelectedCameraIp);
+				cameraPicFeed.getCameraPicByIpAndTime(currentSelectedCameraIp,startDate,endDate);
+			}
+		]]>
+	</fx:Script>
+	<mx1:Canvas    y="120" height="600"  width="1150" horizontalCenter="0" id="mainpicView" visible="false" includeInLayout="false" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+		<s:Image source="assets/picBack.png" verticalCenter="0" width="1048" height="590" horizontalCenter="0" scaleMode="stretch"/>
+		<mx1:Button x="14"  y="230"    styleName="myPicPreviewBtnStyle" id="picPreviewbtn"    cacheAsBitmap="true" click="prebtn_Click()"  />
+		<mx1:Button x="1095"   y="230"    styleName="myPicNextViewBtnStyle" id="picNextviewbtn"    cacheAsBitmap="true" click="nextbtn_Click()"  />
+		<s:Image id="mainImg" verticalCenter="0" width="1068" height="580" horizontalCenter="0"/>
+	</mx1:Canvas>
+	<mx1:Canvas horizontalCenter="0"  id="picCanvas" y="700" width="1150" horizontalScrollBarStyleName="hscroll" verticalScrollPolicy="off" height="150">
+		<!--s:Image source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="200" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0"  width="180" height="90"/>
+		<s:Image x="400" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="600" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="800" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="1000" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="1200" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/>
+		<s:Image x="1400" source="http://192.168.0.158:8080/cameraPic/192.168.0.190_01_20150331143141159_ALARM_INPUT.jpg" verticalCenter="0" width="180" height="90"/-->
+	</mx1:Canvas>
+	
+	<s:BusyIndicator y="540" id="busy" horizontalCenter="0"  visible="true" width="80" height="80"    symbolColor="#FFFFFF" />
+	<s:Label y="540" id="warningtext" horizontalCenter="0"  visible="false" includeInLayout="false" color="#ffffff"  fontSize="35"    fontFamily="微软雅黑"/>
+	 
+</mx1:Canvas>

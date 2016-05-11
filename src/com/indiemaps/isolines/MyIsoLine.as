@@ -1,0 +1,1 @@
+﻿package com.indiemaps.isolines {		public class MyIsoLine {				public var coords = new Array();		public var val:String;		public var coordsLen:Number;		public function MyIsoLine() {			 		}			}	}

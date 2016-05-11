@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:s="library://ns.adobe.com/flex/spark" width="110" height="85">
+	<s:Image  y="0" source="assets/tooltipBack.png" width="110" height="85"/>
+	 
+	<s:Label id="tip" left="14"  top="18"  color="0x555555" text="{_tipText}"  width="110" height="85"  fontSize="10" fontFamily="Arial"/>
+	<fx:Script>
+		<![CDATA[
+			[Bindable]
+			private var _tipText:String;
+			
+			public function get tipText():String
+			{
+				return _tipText;
+			}
+
+			public function set tipText(value:String):void
+			{
+				_tipText = value;
+			}
+
+		]]>
+	</fx:Script>
+</s:Group>

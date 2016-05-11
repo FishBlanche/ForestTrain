@@ -1,0 +1,567 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:View xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:mx="library://ns.adobe.com/flex/mx" creationComplete="create()"  initialize="init()"
+		xmlns:s="library://ns.adobe.com/flex/spark" xmlns:comps="components.*" title="主页视图">
+
+<s:states>
+		<s:State name="realtimeState"/>
+		<s:State name="settingState"/>
+	    <s:State name="isobandState"/>
+		<s:State name="historyState"/>
+</s:states>
+<fx:Script>
+		<![CDATA[
+			import com.esri.ags.geometry.Polygon;
+			import com.indiemaps.delaunay.Delaunay;
+			import com.indiemaps.isolines.MyIsoUtils;
+			
+			import mx.controls.Label;
+			import mx.controls.ToolTip;
+			import mx.core.FlexGlobals;
+			import mx.effects.Glow;
+			import mx.events.FlexEvent;
+			import mx.formatters.NumberFormatter;
+			import mx.managers.ToolTipManager;
+			
+			import Controller.CameraFeed;
+			import Controller.CameraPicturesFeed;
+			import Controller.DataPump;
+			import Controller.DataPumpHelper;
+			import Controller.NodeFeed;
+			import Controller.SensingFeed;
+			
+			import Utils.IsoBandDraw;
+			
+			import components.DrawDataPath;
+			import components.SensingDataFormat;
+			import components.SensorKind;
+			import components.TooltipGroup;
+			
+			import model.CameraEntry;
+			import model.MyPoint;
+			import model.NodeEntry;
+			[Bindable] [Embed (source="assets/sandtable.png")] private static var back_ground:Class;
+			//[Bindable] [Embed (source="assets/HTLC.png")] private static var HTLCpng:Class;
+		//	[Bindable] [Embed (source="assets/thl.png")] private static var HTL:Class;
+			[Bindable] [Embed (source="assets/cameraIcon.png")] private static var cameraIcon:Class;
+			
+			private  var datapump:DataPumpHelper  = new DataPumpHelper();
+			private  var datap:DataPump = datapump.getDataPump();
+			private var nodefeed:NodeFeed;
+			private  var moteIDMap:Dictionary = new Dictionary;//icon to ID
+			private  var moteIDPos:Dictionary = new Dictionary;//id to position
+			private  var moteToolTipMap:Dictionary = new Dictionary;//icon to tooltip object
+		 	private var feed:SensingFeed=new SensingFeed;
+		  	private var camerafeed:CameraFeed;
+			private var path:DrawDataPath;
+			
+			
+			private var rowArray:Array=new Array;
+			private var colArray:Array=new Array;
+			
+			private function initGrid():void
+			{
+				for(var i:uint=0;i<11;i++)
+				{
+					rowArray[i]=i*100*dataT.width/1000;
+					colArray[i]=i*100*dataT.height/1000;
+				}
+			}
+			private function init():void
+			{
+				
+			}
+			private function create():void
+			{
+				nodefeed=new NodeFeed;
+				nodefeed.addEventListener("_SensingNode",showAllNodes,false,0,true);
+				 
+				camerafeed=new CameraFeed;
+				camerafeed.addEventListener("_CameraArrived",showCameras,false,0,true);
+				
+				datap.addEventListener("_newSensingData",newData,false,0,true);
+				this.addEventListener("setting_Complete",settingComplete_Handle,false,0,true);
+				
+				this.addEventListener("settingState",setSetState,false,0,true);
+				this.addEventListener("realtimeState",setRealtimeState,false,0,true);
+				this.addEventListener("isobandState",setIsobandState,false,0,true);
+				this.addEventListener("backFromHistory",backFromHistoryHandle,false,0,true);
+				this.addEventListener("backFromPicView",backFromPicViewHandle,false,0,true);
+			}
+			private function newData(event:Event):void
+			{   
+				var moteid:String = datap.newestSensing.Moteid_ID.toString();
+				 //	trace("moteid:"+moteid);
+					 
+			//	var stockCount:int = feed.newestSensingList.length;
+				for(var e:Object in moteIDMap){
+					var i:Image  = e as Image;
+					if(i.id==moteid&&moteToolTipMap[i]!=null){
+						var glow:Glow =new Glow(i);
+						glow.alphaFrom=0;
+						glow.alphaTo=1;
+						glow.blurXFrom=60;
+						glow.blurYFrom=60;
+						glow.strength=10;
+						glow.color=0x09b53e;
+						glow.duration=2000;
+						glow.play(null,true);					
+						moteToolTipMap[i].tipText = SensorKind.get_tooltip_msg(datap.newestSensing);	
+						moteToolTipMap[i].visible=true;
+						 
+					 	break;
+			    	}
+			    }
+				if(moteIDPos[moteid]!=null){
+					if(path!=null){
+					//	trace("path.drawPath");
+						path.drawPath(moteid,datap.newestSensing.path,datap.newestSensing.Cluster_id.toString());	
+						//trace("show path~~"+moteid+"       "+datap.newestSensing.path+"      "+datap.newestSensing.Cluster_id.toString()+"   "+moteIDPos[datap.newestSensing.Cluster_id.toString()].x+","+moteIDPos[datap.newestSensing.Cluster_id.toString()].y);
+					}								
+				}
+			}
+			private function settingComplete_Handle(e:Event):void
+			{
+				//sg.visible=false;
+			}
+			private function setSetState(e:Event):void
+			{
+				this.currentState="settingState";
+			}
+			private function setRealtimeState(e:Event):void
+			{
+				this.currentState="realtimeState";
+			}
+			private function setIsobandState(event:Event,type:int=1):void
+			{
+				this.currentState="isobandState";
+				
+				var pointArr:Array=new Array;
+				var sum:Number=0;
+				var avg:Number=0;
+				for (var e:Object in nodefeed.nodes)
+				{
+					var node:NodeEntry =nodefeed.nodes.getItemAt(int(e)) as NodeEntry;
+					if(node!=null){	
+						var Msg:String = getcurrentMsgByMoteID(Number(node.Moteid_ID),type);
+						if(Msg!="N/A")
+						{
+							var poin:MyPoint=new MyPoint;
+							poin.x=node.Location_X*dataTableIsoband.width/1000;
+							poin.y=node.Location_Y*dataTableIsoband.height/1000;
+							poin.z=Number(Msg);
+							 if(type==4)
+							 {
+								 trace("type==4"+poin.z);
+							 }
+							sum+=poin.z;
+							pointArr.push(poin);
+							
+						}
+					}
+				}
+				var nf:NumberFormatter = new NumberFormatter();
+				nf.precision = 1;
+				avg=Number(nf.format(sum/pointArr.length));
+				pointArr.sortOn("z",Array.NUMERIC);
+				//trace("avg"+avg);
+				var k:int=0;
+				var intevalSum:Number=0;
+				var intervalAvg:Number=0;
+				/*
+			    var len:int=pointArr.length-1;
+				for(k=0;k<len;k++)
+				{
+					intevalSum+=(pointArr[k+1].z-pointArr[k].z);
+				}
+				intervalAvg=Number(nf.format(intevalSum/len));
+				*/
+				if(pointArr.length>=2)
+				{
+					intervalAvg=Number(nf.format(pointArr[1].z-pointArr[0].z));
+				}
+				if(intervalAvg>=1)
+				{
+					intervalAvg=0.5;
+				}
+				if(intervalAvg<=0)
+				{
+					intervalAvg=0.1;
+				}
+			 	trace("intervalAvg"+intervalAvg);
+				/*
+				var  myArray:Array = new Array();
+				var sum:Number=0;
+				var avg:Number=0;
+				for(var  i=0;i<11;i++){
+					myArray[i] = new Array();
+					for(var  j=0;j<11;j++){
+						myArray[i][j] = new MyPoint();
+						myArray[i][j].x=rowArray[j];
+						myArray[i][j].y=colArray[i];
+						myArray[i][j].z=calValue(myArray[i][j].x,myArray[i][j].y,pointArr);
+						sum+=myArray[i][j].z;
+					 	trace("myArray[i][j].z"+myArray[i][j].z);
+					};
+				};
+				avg=sum/10;
+				var classesArray:Array = new Array(14, 14.4,14.8,15.2,15.6,16);
+				var colorsArray:Array = new Array(0x145b7d,0x00ae9d,0x1d953f,0xffe600,0xf58220,0xf391a9);
+				var isoban:IsoBandDraw=new IsoBandDraw;
+				var polygonVector:Vector.<Polygon>=	isoban.isoband(myArray,classesArray,dataTableIsoband);
+				drawPolygons(polygonVector,colorsArray);*/
+				
+				 // draw isoband
+			//	trace("intervalAvg"+intervalAvg);
+				
+				var triangles:Array =Delaunay.triangulate(pointArr,dataTableIsoband);
+			 
+			    var isos:Array = MyIsoUtils.isoline(triangles,  pointArr,dataTableIsoband,intervalAvg, 0);
+				var classesArray:Array =[];
+				var colorsArray:Array = [];
+				switch(type)
+				{
+					case 1:classesArray= new Array(5,10,15,20,25,30);
+						    colorsArray=new Array(0x9006fb,0x094dfb,0x13cbf3,0x13f35d,0xf49c10,0xf811f5,0xf50c2d);
+						    break;
+					case 2:classesArray= new Array(0,20,40,60,80,100);
+						   colorsArray=new Array(0x9006fb,0x094dfb,0x13cbf3,0x13f35d,0xf49c10,0xf811f5,0xf50c2d);
+						   break;
+					case 3:classesArray= new Array(0,5,10,15,20,25);
+						   colorsArray=new Array(0x9006fb,0x094dfb,0x13cbf3,0x13f35d,0xf49c10,0xf811f5,0xf50c2d);
+						   break;
+					case 4:classesArray= new Array(0,5,12,24,50);
+						   colorsArray=new Array(0x094dfb,0x9006fb,0x13cbf3,0x13f35d,0xf49c10,0xf811f5);
+						   break;
+					default:break;
+				}
+				var outsidePoints:Array = MyIsoUtils.getOutSidePoints(triangles,pointArr);
+				var isosArray:Array=MyIsoUtils.isosFurtherHandle(isos,outsidePoints,triangles,pointArr,dataTableIsoband);
+				 
+				MyIsoUtils.drawIsolines(isosArray,dataTableIsoband, "continuous", colorsArray, classesArray, .5, .75,dataTableIsoband.x,dataTableIsoband.x+dataTableIsoband.width,0,dataTableIsoband.y+dataTableIsoband.height,avg,0);
+				MyIsoUtils.drawIsolines(MyIsoUtils.closedLine,dataTableIsoband, "continuous", colorsArray, classesArray, .5, .75,dataTableIsoband.x,dataTableIsoband.x+dataTableIsoband.width,0,dataTableIsoband.y+dataTableIsoband.height,avg,1);
+				//Delaunay.drawDelaunay(triangles, pointArr,dataTableIsoband,false);
+		 
+				//modify colorbar and button alpha
+				switch(type)
+				{
+					case 1:colorbar.source="assets/temColorBar.png";
+						   tempBtn.alpha=1;
+						    humBtn.alpha=0.4;
+						    lightBtn.alpha=0.4;
+						    warningBtn.alpha=0.4;
+						    break;
+					case 2:colorbar.source="assets/humColorBar.png";
+						   tempBtn.alpha=0.4;
+						   humBtn.alpha=1;
+						   lightBtn.alpha=0.4;
+						   warningBtn.alpha=0.4;
+						   break;
+					case 3:colorbar.source="assets/lightColorBar.png";
+						   tempBtn.alpha=0.4;
+						   humBtn.alpha=0.4;
+						   lightBtn.alpha=1;
+						    warningBtn.alpha=0.4;
+						   break;
+					case 4:colorbar.source="assets/levelColorBar.png";
+						    tempBtn.alpha=0.4;
+					    	humBtn.alpha=0.4;
+					    	lightBtn.alpha=0.4;
+						    warningBtn.alpha=1;
+						   break;
+					default:break;
+				}
+				
+ 			}
+			private function showTempBand(e:MouseEvent):void
+			{
+				//trace("showTempBand");
+				setIsobandState(null,1);
+			}
+			private function showHumBand(e:MouseEvent):void
+			{
+			//	trace("showHumBand");
+				setIsobandState(null,2);
+				
+			}
+			private function showLightBand(e:MouseEvent):void
+			{
+			//	trace("showLightBand");
+				setIsobandState(null,3);
+			}
+			private function showWarningBand(e:MouseEvent):void
+			{
+			//	trace("showWarningBand");
+				setIsobandState(null,4);
+				
+			}
+			private function getcurrentMsgByMoteID(id:Number,type:int):String{
+				var stockCount:int = feed.newestSensingList.length;
+				var Msg:String = "N/A";
+				if(id<0) return Msg;
+				for (var k:int = 0; k < stockCount; k++)
+				{				
+					if(feed.newestSensingList.getItemAt(k).Moteid_ID == id){
+						switch(type){
+							case 1:
+								Msg = SensingDataFormat.temperature(feed.newestSensingList.getItemAt(k));
+								break;
+							case 2:
+								Msg = SensingDataFormat.humidity(feed.newestSensingList.getItemAt(k));	
+								break;
+							case 3:
+								Msg = SensingDataFormat.light(feed.newestSensingList.getItemAt(k));	
+								break;
+							case 4:
+								Msg =SensingDataFormat.warningLevel(feed.newestSensingList.getItemAt(k)).split(" ")[0];
+						}
+						return Msg;					
+					}
+				}
+				return Msg;
+			}
+			private function calValue(x:Number,y:Number,originPoint:Array):Number
+			{
+				var sum1:Number=0;
+				var sum2:Number=0;
+				for(var i:uint=0;i<originPoint.length;i++)
+				{
+					sum1+=(1/((originPoint[i].x-x)*(originPoint[i].x-x)+(originPoint[i].y-y)*(originPoint[i].y-y)))*originPoint[i].z;
+					sum2+=1/((originPoint[i].x-x)*(originPoint[i].x-x)+(originPoint[i].y-y)*(originPoint[i].y-y));
+				}
+		//		trace("sum1  sum2"+sum1+","+sum2);
+				return sum1/sum2;
+			}
+			private function drawPolygons(polygonVector:Vector.<Polygon>,colorsArray:Array):void
+			{
+				var vectlen:int=polygonVector.length;
+				var ringslen:int=0;
+				var ringlen:int=0;
+				var i:int=0;
+				var j:int=0;
+				var k:int=0;
+				//trace("drawPolygons--------"+vectlen);
+				if(vectlen>0)
+				{
+					for(i=0;i<vectlen;i++)
+					{
+					//	ringslen=polygonVector[i].rings.length;
+					//	trace("ringslen--------"+ringslen);
+						if(polygonVector[i].rings)
+						{
+							ringslen=polygonVector[i].rings.length;
+							
+							for(j=0;j<ringslen;j++)
+							{
+								ringlen=polygonVector[i].rings[j].length;
+								trace("ringslen--------"+ringlen);
+								var sp:Shape=new Shape;
+								 
+								dataTableIsoband.addChild(sp);
+								sp.graphics.beginFill(colorsArray[i]);
+								sp.graphics.lineStyle(5, colorsArray[i]);
+								sp.graphics.moveTo(polygonVector[i].getPoint(j,0).x,polygonVector[i].getPoint(j,0).y);
+								for(k=1;k<ringlen;k++)
+								{
+									sp.graphics.lineTo(polygonVector[i].getPoint(j,k).x,polygonVector[i].getPoint(j,k).y);
+									trace("polygonVector[i].getPoint(j,k).x,polygonVector[i].getPoint(j,k).y   "+polygonVector[i].getPoint(j,k).x+","+polygonVector[i].getPoint(j,k).y);
+								}
+								sp.graphics.endFill();
+							}
+						}
+						
+					}
+				}
+			}
+			private function dataT_creationCompleteHandler(event:FlexEvent):void
+			{
+				initGrid();
+			}
+			private function mouseClicked(event:MouseEvent):void{	
+				/*
+				if(moteToolTipMap[event.currentTarget]!=null){				
+					moteToolTipMap[event.currentTarget].visible=moteToolTipMap[event.currentTarget].visible?false:true;
+				}			*/
+				chartGp.selectedId=int((event.currentTarget as Image).id);
+				chartGp.includeInLayout=true;
+				chartGp.visible=true;
+				
+				//trace("mouseClicked"+(event.currentTarget as Image).id);
+			}
+			private function backFromHistoryHandle(e:Event):void
+			{
+				chartGp.includeInLayout=false;
+				chartGp.visible=false;
+			}
+			private function backFromPicViewHandle(e:Event):void
+			{
+				picOverView.includeInLayout=false;
+				picOverView.visible=false;
+			}
+			private function getMsgByMoteID(id:Number):String{
+				var Msg:String = "select ID for me";
+			 
+				var stockCount:int = feed.newestSensingList.length;
+				//trace("id----"+id);
+				if(id<0)
+				{
+					trace("id<0");
+					return Msg;
+				}
+				//	nf.precision = 2;
+				for (var k:int = 0; k < stockCount; k++)
+				{				
+					if(feed.newestSensingList.getItemAt(k).Moteid_ID == id){
+						Msg = SensorKind.get_tooltip_msg(feed.newestSensingList.getItemAt(k));	
+						//trace("Msg"+Msg);
+						return Msg;					
+					}
+				}
+				return Msg;
+			}
+			private function startShow_clickHandler( ):void//show tooltips
+			{
+				for(var e:Object in moteIDMap){
+					var i:Image  = e as Image;
+					var Msg:String = getMsgByMoteID(moteIDMap[i]);
+				//	trace("msg"+Msg+","+i.x);
+					if(moteToolTipMap[i]==null){		
+						var tg:TooltipGroup=new TooltipGroup;
+						tg.tipText=Msg;
+						moteToolTipMap[i]=tg;
+						if((dataT.width-i.x)<100){
+							//moteToolTipMap[i] =  ToolTipManager.createToolTip(Msg, i.x-10,i.y+30,null,null) as ToolTip;
+					    	tg.x=i.x-10;
+							tg.y=i.y-20;
+						}else{
+							//moteToolTipMap[i] =  ToolTipManager.createToolTip(Msg, i.x+30,i.y,null,null) as ToolTip;
+							tg.x=i.x+40;
+							tg.y=i.y-20;
+						}
+						
+						//moteToolTipMap[i].setStyle("styleName", "errorTip");
+					}else{
+						
+						moteToolTipMap[i].move(i.x+i.width,i.y);	
+						moteToolTipMap[i].tipText = Msg;
+					}
+				 	moteToolTipMap[i].depth=3;
+				 	 dataT.addElement(moteToolTipMap[i]);
+					
+					//moteMsgMap[i] = msg;
+				}
+			}
+			private function showAllNodes(event:Event):void
+			{  
+			//	trace("showAll");
+				nodefeed.removeEventListener("_SensingNode",showAllNodes);
+				busy.visible=false;
+				for (var e:Object in nodefeed.nodes)
+				{
+					 var node:NodeEntry =nodefeed.nodes.getItemAt(int(e)) as NodeEntry;
+					 if(node!=null){							
+						var img:Image = new Image();
+						img.id = node.Moteid_ID;
+						
+						img.source="assets/thl.png";
+					    img.depth=2;
+					 	dataT.addElement(img);						
+						
+						img.x =node.Location_X*dataT.width/1000;
+						img.y =node.Location_Y*dataT.height/1000;
+						img.addEventListener(MouseEvent.MOUSE_DOWN,mouseClicked,false,0,true);
+						moteIDPos[img.id]=new Point(img.x+20,img.y+22);		
+						moteIDMap[img] = node.Moteid_ID;
+					 }
+				}
+			 	path =new DrawDataPath(dataT,moteIDPos);
+			  	startShow_clickHandler();
+			}
+			private function showCameras(event:Event):void
+			{
+				trace("showCameras");
+			 
+				camerafeed.removeEventListener("_CameraArrived",showCameras);
+				for (var e:Object in camerafeed.cameraList)
+				{
+					var camera:CameraEntry=camerafeed.cameraList.getItemAt(int(e)) as CameraEntry;
+					if(camera!=null){							
+						var img:Image = new Image();
+						img.id = camera.ip_Address;
+					//	trace("camera.ip_Address"+camera.ip_Address);
+						img.source=cameraIcon;
+						img.depth=2;
+						dataT.addElement(img);							
+						img.x =camera.Location_X*dataT.width/1000;
+						img.y =camera.Location_Y*dataT.height/1000;
+						img.addEventListener(MouseEvent.MOUSE_DOWN,CameraClicked,false,0,true);
+						 
+					}
+				}
+			}
+			private function CameraClicked(e:MouseEvent):void
+			{
+				picOverView.currentSelectedCameraIp=(e.currentTarget as Image).id;
+				picOverView.includeInLayout=true;
+				picOverView.visible=true;
+				
+			 
+			//	trace("(e.currentTarget as Image).id+"+(e.currentTarget as Image).id);
+			}
+		
+			private function hide_or_show_tooltips(v:Boolean):void//hide tooltips
+			{
+				var i:Image;
+				if(v){
+					for(var e:Object in moteIDMap){
+						i = e as Image;	
+						if(moteToolTipMap[i]!=null){
+							moteToolTipMap[i] .visible = true;	}			
+					}
+				}else{
+					for(var o:Object in moteIDMap){
+						i = o as Image;	
+						if(moteToolTipMap[i]!=null){
+							moteToolTipMap[i] .visible = false;	}
+					}
+				}
+			}
+			
+			
+		]]>
+</fx:Script>
+<s:Rect y="85" width="1600" height="100%"> 
+		<s:fill> 
+			<s:BitmapFill id="background" fillMode="scale" smooth="true"
+						  source="{back_ground}" /> 
+		</s:fill> 
+</s:Rect> 
+<s:Group y="85" id="dataT" width="1600" height="815" creationComplete="dataT_creationCompleteHandler(event)"
+			  includeIn="realtimeState">		
+</s:Group>
+<s:Group y="85" id="dataTableIsoband" width="1600" height="815"
+					includeIn="isobandState"/>	
+
+<s:Image x="0" y="0"  source="assets/barbackground.png" scaleMode="stretch" />
+<s:BusyIndicator  x="50" id="busy" visible="true" width="40" height="40"    symbolColor="#FFFFFF" />
+<comps:ToggleButtonGroup x="165">
+</comps:ToggleButtonGroup>
+<comps:SettingGroup x="140" y="85" id="settingGp" includeIn="settingState"/>
+<comps:PictureGroup id="picOverView" y="0" x="0" width="1600"  height="900"  includeInLayout="false" visible="false"/>
+<!--comps:HistoryPicSearchGroup id="hisPicSearch" x="89" y="85" includeIn="realtimeState" includeInLayout="false" visible="false"/-->
+	
+	<s:Image   x="700" y="120" id="colorbar"   source="assets/temColorBar.png" includeIn="isobandState"/>
+	<s:Spacer width="50"/>
+	<s:HGroup x="1200" y="95" includeIn="isobandState" gap="5">
+		<s:Image id="tempBtn" source="assets/tempBtn.png" width="80" height="80" alpha="1" click="showTempBand(event)"/>
+		<s:Image id="humBtn" source="assets/humBtn.png" width="80" height="80" alpha="0.4" click="showHumBand(event)"/>
+		<s:Image id="lightBtn" source="assets/lightBtn.png" width="80" height="80" alpha="0.4" click="showLightBand(event)"/>
+		<s:Image id="warningBtn" source="assets/warningBtn.png" width="80" height="80" alpha="0.4" click="showWarningBand(event)"/>
+	</s:HGroup>
+	<s:HGroup x="1200" y="180" includeIn="isobandState" gap="5">
+		 <s:Label textAlign="center" text="温度" color="0xffffff" fontSize="18" width="80" height="80"/>
+		<s:Label textAlign="center" text="湿度" color="0xffffff" fontSize="18" width="80" height="80"/>
+		<s:Label textAlign="center" text="光照" color="0xffffff" fontSize="18" width="80" height="80"/>
+		<s:Label textAlign="center" text="预警" color="0xffffff" fontSize="18" width="80" height="80"/>
+	</s:HGroup>
+	<comps:ChartGroup id="chartGp" y="0" x="0" width="1600"  height="900" includeInLayout="false" visible="false"/>
+</s:View>

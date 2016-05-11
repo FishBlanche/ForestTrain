@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:s="library://ns.adobe.com/flex/spark" width="513" height="42">
+		<fx:Style>
+		@namespace s "library://ns.adobe.com/flex/spark";
+		@namespace mx "library://ns.adobe.com/flex/mx";
+		.myTextInput
+		{
+			borderSkin: Embed(source='assets/textBox.png',scaleGridLeft='4', scaleGridTop='10', scaleGridRight='45', scaleGridBottom='15'
+				);
+			color: #000000;
+			font-size:18;
+			padding-left:5;
+			showPromptWhenFocused: false;
+		}
+		.mySearchBtnStyle
+		{
+				skin:Embed(source="assets/searchNormal.png");
+				overSkin:Embed(source="assets/searchSelected.png");
+				selectedDownSkin:Embed(source="assets/searchSelected.png");
+				selectedUpSkin:Embed(source="assets/searchSelected.png");
+				selectedOverSkin:Embed(source="assets/searchSelected.png");
+				fontFamily:"Verdana";
+				fontSize:25;
+				textAlign:"center";
+				color:"0xffffff";
+				textRollOverColor:"0xffffff";
+				textSelectedColor:"0xffffff";
+		}
+	</fx:Style>
+	<fx:Script>
+		<![CDATA[
+			private function searchbtn_Click():void
+			{
+				
+			}
+		]]>
+	</fx:Script>
+<s:Image source="assets/setbg.png" width="513" height="42"/>
+<s:HGroup x="40" width="513" height="42" verticalAlign="middle" id="hg">
+	<mx:TextInput  width="70"       height="29"  id="startYear" color="#000000"  styleName="myTextInput" restrict="0-9"  />
+	<mx:TextInput  width="50"    height="29"  id="startMonth" color="#000000" styleName="myTextInput" restrict="0-9" />
+	<mx:TextInput  width="50"    height="29"  id="startDay" color="#000000" styleName="myTextInput" restrict="0-9" />
+	<s:Image source="assets/to.png" />
+	<mx:TextInput width="70"      height="29"  id="endYear" color="#000000"  styleName="myTextInput" restrict="0-9"  />
+	<mx:TextInput  width="50"    height="29"  id="endMonth" color="#000000" styleName="myTextInput" restrict="0-9" />
+	<mx:TextInput  width="50"    height="29"  id="endDay" color="#000000" styleName="myTextInput" restrict="0-9" />
+	<s:Spacer width="4"/>
+	<mx:Button  right="5"    styleName="mySearchBtnStyle" id="searchbtn"    cacheAsBitmap="true" click="searchbtn_Click()"  />
+</s:HGroup>
+</s:Group>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" xmlns:mx="library://ns.adobe.com/flex/mx"
+		 xmlns:s="library://ns.adobe.com/flex/spark" width="1475" height="85" creationComplete="create()" >
+<fx:Style>
+		.myBtn1Style
+		{
+			skin:Embed(source="assets/buttonbar/setNormal.png");
+			overSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedDownSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedUpSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedOverSkin:Embed(source="assets/buttonbar/setSelected.png");
+			fontFamily:"Verdana";
+			fontSize:25;
+			textAlign:"center";
+			color:"0xffffff";
+			textRollOverColor:"0xffffff";
+			textSelectedColor:"0xffffff";
+		}
+		.myBtn1SelectedStyle
+		{
+			skin:Embed(source="assets/buttonbar/setSelected.png");
+			overSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedDownSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedUpSkin:Embed(source="assets/buttonbar/setSelected.png");
+			selectedOverSkin:Embed(source="assets/buttonbar/setSelected.png");
+			fontFamily:"Verdana";
+			fontSize:25;
+			textAlign:"center";
+			color:"0xffffff";
+			textRollOverColor:"0xffffff";
+			textSelectedColor:"0xffffff";
+		}
+	   .myBtn2Style
+	   {
+		skin:Embed(source="assets/buttonbar/realtimeNormal.png");
+		overSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	    }
+	   .myBtn2SelectedStyle
+	   {
+		skin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		overSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/realtimeSelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	   }
+	   .myBtn3Style
+	   {
+		skin:Embed(source="assets/buttonbar/isobandNormal.png");
+		overSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	   }
+	   .myBtn3SelectedStyle
+	   {
+		skin:Embed(source="assets/buttonbar/isobandSelected.png");
+		overSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/isobandSelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	   }
+	   .myBtn4Style
+	   {
+		skin:Embed(source="assets/buttonbar/historyNormal.png");
+		overSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/historySelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	    }
+	    .myBtn4SelectedStyle
+	    {
+		skin:Embed(source="assets/buttonbar/historySelected.png");
+		overSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedDownSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedUpSkin:Embed(source="assets/buttonbar/historySelected.png");
+		selectedOverSkin:Embed(source="assets/buttonbar/historySelected.png");
+		fontFamily:"Verdana";
+		fontSize:25;
+		textAlign:"center";
+		color:"0xffffff";
+		textRollOverColor:"0xffffff";
+		textSelectedColor:"0xffffff";
+	    }
+</fx:Style>
+	<fx:Script>
+		<![CDATA[
+			import mx.controls.Button;
+			private var currentSelectedBtn:Button=new Button;
+			
+			
+			private function create():void
+			{
+				currentSelectedBtn=btn2;
+				currentSelectedBtn.name="myBtn2";
+			}
+		    private function btn1_Click():void
+			{
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"Style";
+				currentSelectedBtn=btn1;
+				currentSelectedBtn.name="myBtn1";
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"SelectedStyle";
+				dispatchEvent(new Event("settingState",true));
+			}
+			private function btn2_Click():void
+			{
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"Style";
+				currentSelectedBtn=btn2;
+				currentSelectedBtn.name="myBtn2";
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"SelectedStyle";
+				dispatchEvent(new Event("realtimeState",true));
+			}
+			private function btn3_Click():void
+			{
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"Style";
+				currentSelectedBtn=btn3;
+				currentSelectedBtn.name="myBtn3";
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"SelectedStyle";
+				dispatchEvent(new Event("isobandState",true));
+			}
+			/*
+			private function btn4_Click():void
+			{
+				currentSelectedBtn.styleName=currentSelectedBtn.name+"Style";
+				currentSelectedBtn=btn4;
+				currentSelectedBtn.name="myBtn4";
+			    currentSelectedBtn.styleName=currentSelectedBtn.name+"SelectedStyle";
+			}*/
+		]]>
+	</fx:Script>
+<s:HGroup width="1435" height="85">
+	<mx:Button styleName="myBtn1Style" id="btn1"    cacheAsBitmap="true" click="btn1_Click()" width="475" height="85"/>
+	<mx:Button styleName="myBtn2SelectedStyle" id="btn2"    cacheAsBitmap="true" click="btn2_Click()" width="475" height="85"/>
+	<mx:Button styleName="myBtn3Style" id="btn3"    cacheAsBitmap="true" click="btn3_Click()" width="475" height="85"/>
+	<!--mx:Button styleName="myBtn4Style" id="btn4"    cacheAsBitmap="true" click="btn4_Click()" width="220" height="85"/-->
+</s:HGroup> 
+</s:Group>
